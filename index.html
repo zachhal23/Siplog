@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sip Log">
+<meta name="theme-color" content="#0f0e17">
+<link rel="manifest" href="manifest.json">
+<title>Sip Log</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap');
+
+:root {
+  --bg: #0f0e17;
+  --surface: #1a1927;
+  --surface2: #221f33;
+  --accent: #9d8df1;
+  --accent-dim: #6b5fd4;
+  --green: #5ecb8e;
+  --green-dim: #2a6b4a;
+  --text: #fffffe;
+  --text2: #a7a9be;
+  --text3: #6b6d84;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 15px;
+  overscroll-behavior: none;
+}
+
+#app {
+  max-width: 430px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  padding: calc(var(--safe-top) + 16px) 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.app-title {
+  font-family: 'DM Serif Display', serif;
+  font-size: 28px;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+
+.app-title span { color: var(--accent); font-style: italic; }
+
+.header-count {
+  font-size: 12px;
+  color: var(--text3);
+  background: var(--surface);
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+}
+
+.view-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 14px 20px 0;
+}
+
+.view-tab {
+  flex: 1;
+  padding: 7px 4px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: none;
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text3);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.view-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px 0;
+}
+
+.period-label {
+  font-family: 'DM Serif Display', serif;
+  font-size: 19px;
+  color: var(--text);
+}
+
+.nav-btns { display: flex; gap: 6px; }
+
+.nav-btn {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border2);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--text2);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.nav-btn:active { transform: scale(0.92); background: var(--surface2); }
+
+#main-content { flex: 1; padding: 12px 20px; overflow-y: auto; }
+
+/* MONTH CALENDAR */
+.day-labels {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+  margin-bottom: 4px;
+}
+.day-label {
+  text-align: center;
+  font-size: 10px;
+  color: var(--text3);
+  padding: 2px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.day-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  min-height: 54px;
+  padding: 4px 5px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  position: relative;
+}
+.day-cell:active { background: var(--surface2); }
+.day-cell.empty { background: transparent; border-color: transparent; cursor: default; }
+.day-cell.today { border-color: var(--accent); }
+.day-num {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text3);
+}
+.day-cell.today .day-num { color: var(--accent); }
+.day-preview { font-size: 11px; line-height: 1.35; word-break: break-all; margin-top: 2px; }
+.note-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--accent);
+  border-radius: 50%;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+/* STATS CARDS */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 14px;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+}
+.stat-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.stat-val { font-size: 22px; font-weight: 300; color: var(--text); font-family: 'DM Serif Display', serif; }
+
+/* WEEK VIEW */
+.week-list { display: flex; flex-direction: column; gap: 6px; }
+.week-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.week-row:active { background: var(--surface2); }
+.week-row.today-row { border-color: var(--accent); }
+.week-meta { min-width: 42px; }
+.week-dow { font-size: 12px; font-weight: 500; color: var(--text2); }
+.week-d { font-size: 11px; color: var(--text3); }
+.week-drinks { flex: 1; font-size: 16px; word-break: break-all; }
+.week-note { font-size: 11px; color: var(--text3); font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+.week-cnt { font-size: 11px; color: var(--text3); }
+
+/* DAY VIEW */
+.day-list { display: flex; flex-direction: column; gap: 8px; }
+.day-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.day-card:active { background: var(--surface2); }
+.day-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.day-card-date { font-size: 13px; font-weight: 500; color: var(--text2); }
+.day-card-cnt { font-size: 11px; color: var(--text3); }
+.day-card-drinks { font-size: 20px; letter-spacing: 2px; margin-bottom: 4px; }
+.day-card-note { font-size: 12px; color: var(--text3); font-style: italic; }
+.empty-state { text-align: center; padding: 40px 0; color: var(--text3); font-size: 13px; line-height: 1.7; }
+
+/* STATS VIEW */
+.stats-section { margin-bottom: 20px; }
+.stats-heading {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text3);
+  margin-bottom: 10px;
+}
+.bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+.bar-icon { font-size: 16px; min-width: 24px; }
+.bar-track {
+  flex: 1;
+  height: 18px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar-fill-alc { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.4s ease; }
+.bar-fill-na { height: 100%; background: var(--green); border-radius: 4px; transition: width 0.4s ease; }
+.bar-count { font-size: 12px; color: var(--text3); min-width: 18px; text-align: right; }
+.legend { display: flex; gap: 14px; margin-bottom: 14px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text2); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* SHEET (bottom modal) */
+.sheet-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  z-index: 100;
+  align-items: flex-end;
+  justify-content: center;
+}
+.sheet-overlay.open { display: flex; }
+
+.sheet {
+  background: var(--surface);
+  border-radius: 24px 24px 0 0;
+  padding: 14px 20px calc(var(--safe-bottom) + 20px);
+  width: 100%;
+  max-width: 430px;
+  max-height: 88vh;
+  overflow-y: auto;
+  border: 1px solid var(--border2);
+  border-bottom: none;
+}
+
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  margin: 0 auto 14px;
+}
+
+.sheet-date {
+  font-family: 'DM Serif Display', serif;
+  font-size: 20px;
+  color: var(--text);
+  margin-bottom: 12px;
+}
+
+.drink-display {
+  min-height: 48px;
+  font-size: 24px;
+  letter-spacing: 3px;
+  padding: 10px 12px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  word-break: break-all;
+  line-height: 1.5;
+  margin-bottom: 10px;
+  background: var(--bg);
+}
+.drink-display.empty { font-size: 13px; color: var(--text3); letter-spacing: 0; }
+
+.cat-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.cat-tab {
+  padding: 5px 14px;
+  border: 1px solid var(--border2);
+  border-radius: 20px;
+  font-size: 12px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  background: none;
+  color: var(--text3);
+  transition: all 0.15s;
+}
+.cat-tab.active-alc { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+.cat-tab.active-na { background: var(--green-dim); border-color: var(--green); color: #fff; }
+
+.emoji-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.emoji-opt { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.emoji-btn {
+  font-size: 24px;
+  width: 52px;
+  height: 52px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+}
+.emoji-btn:active { transform: scale(0.88); border-color: var(--accent); }
+.emoji-label { font-size: 9px; color: var(--text3); text-align: center; }
+
+.note-label { font-size: 11px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+.note-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  resize: none;
+  min-height: 64px;
+  margin-bottom: 12px;
+}
+.note-input::placeholder { color: var(--text3); }
+.note-input:focus { outline: none; border-color: var(--accent); }
+
+.sheet-actions { display: flex; gap: 8px; }
+.btn-undo {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  background: none;
+  font-size: 13px;
+  font-family: 'DM Sans', sans-serif;
+  color: var(--text2);
+  cursor: pointer;
+}
+.btn-undo:active { background: var(--surface2); }
+.btn-done {
+  flex: 2;
+  padding: 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-done:active { background: var(--accent-dim); }
+
+/* Install banner */
+.install-banner {
+  display: none;
+  margin: 10px 20px 0;
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+.install-banner strong { color: var(--accent); display: block; margin-bottom: 2px; font-size: 13px; }
+.install-close {
+  float: right;
+  background: none;
+  border: none;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  margin-left: 8px;
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="app-title">Sip <span>Log</span></div>
+    <div class="header-count" id="header-count">0 this month</div>
+  </header>
+
+  <div class="install-banner" id="install-banner">
+    <button class="install-close" id="install-close">×</button>
+    <strong>Add to Home Screen</strong>
+    Tap the Share button in Safari, then "Add to Home Screen" to install this app.
+  </div>
+
+  <div class="view-tabs">
+    <button class="view-tab active" data-view="month">Month</button>
+    <button class="view-tab" data-view="week">Week</button>
+    <button class="view-tab" data-view="day">Day</button>
+    <button class="view-tab" data-view="stats">Stats</button>
+  </div>
+
+  <div class="nav-bar">
+    <div class="period-label" id="period-label"></div>
+    <div class="nav-btns">
+      <button class="nav-btn" id="prev">&#8249;</button>
+      <button class="nav-btn" id="next">&#8250;</button>
+    </div>
+  </div>
+
+  <div id="main-content"></div>
+</div>
+
+<div class="sheet-overlay" id="sheet-overlay">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-date" id="sheet-date"></div>
+    <div class="drink-display empty" id="drink-display">Tap a drink to log it</div>
+    <div class="cat-tabs">
+      <button class="cat-tab active-alc" data-cat="alc">Alcoholic</button>
+      <button class="cat-tab" data-cat="na">Non-alcoholic</button>
+    </div>
+    <div class="emoji-grid" id="emoji-grid"></div>
+    <div class="note-label">Notes</div>
+    <textarea class="note-input" id="note-input" placeholder="e.g. Dinner with friends at Rosie's…" rows="3"></textarea>
+    <div class="sheet-actions">
+      <button class="btn-undo" id="btn-undo">Undo last</button>
+      <button class="btn-done" id="btn-done">Save & close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ALC=[
+  {e:'🍺',l:'Beer'},{e:'🍻',l:'Pint'},{e:'🍷',l:'Wine'},{e:'🥂',l:'Bubbly'},
+  {e:'🍸',l:'Cocktail'},{e:'🍹',l:'Tropical'},{e:'🥃',l:'Whiskey'},
+  {e:'🍾',l:'Bottle'},{e:'🧉',l:'Mate'},{e:'🫗',l:'Pour'}
+];
+const NA=[
+  {e:'🧃',l:'Juice'},{e:'🥤',l:'Soda'},{e:'🧋',l:'Boba'},{e:'☕',l:'Coffee'},
+  {e:'🍵',l:'Tea'},{e:'🧊',l:'Water'},{e:'🥛',l:'Milk'},{e:'🍋',l:'Lemonade'},
+  {e:'🫖',l:'Herbal'},{e:'🍫',l:'Cocoa'}
+];
+const NA_SET=new Set(NA.map(d=>d.e));
+const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function loadData(){try{return JSON.parse(localStorage.getItem('siplog')||'{}')}catch{return {}}}
+function saveData(){localStorage.setItem('siplog',JSON.stringify(DATA))}
+let DATA=loadData();
+let view='month';
+const today=new Date();
+let cur=new Date(today.getFullYear(),today.getMonth(),1);
+let activeKey=null;
+let activeCat='alc';
+
+function key(y,m,d){return `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+function getDayData(k){return DATA[k]||{drinks:[],note:''}}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate()}
+function isToday(y,m,d){return today.getFullYear()===y&&today.getMonth()===m&&today.getDate()===d}
+function countAlc(drinks){return drinks.filter(e=>!NA_SET.has(e)).length}
+function countNA(drinks){return drinks.filter(e=>NA_SET.has(e)).length}
+
+function updateHeaderCount(){
+  const y=cur.getFullYear(),m=cur.getMonth(),dim=daysInMonth(y,m);
+  let t=0;
+  for(let d=1;d<=dim;d++){const dd=getDayData(key(y,m,d));t+=dd.drinks.length}
+  document.getElementById('header-count').textContent=`${t} this month`;
+}
+
+function updatePeriodLabel(){
+  const y=cur.getFullYear(),m=cur.getMonth();
+  if(view==='week'){
+    const ws=getWeekStart();
+    const we=new Date(ws);we.setDate(ws.getDate()+6);
+    document.getElementById('period-label').textContent=
+      `${MONTHS[ws.getMonth()].slice(0,3)} ${ws.getDate()} – ${MONTHS[we.getMonth()].slice(0,3)} ${we.getDate()}`;
+  } else {
+    document.getElementById('period-label').textContent=`${MONTHS[m]} ${y}`;
+  }
+}
+
+function renderMonth(){
+  const y=cur.getFullYear(),m=cur.getMonth();
+  const dim=daysInMonth(y,m);
+  const start=new Date(y,m,1).getDay();
+  let html=`<div class="day-labels">${DAYS.map(d=>`<div class="day-label">${d}</div>`).join('')}</div><div class="cal-grid">`;
+  for(let i=0;i<start;i++) html+=`<div class="day-cell empty"></div>`;
+  for(let d=1;d<=dim;d++){
+    const k=key(y,m,d);
+    const dd=getDayData(k);
+    const tod=isToday(y,m,d);
+    html+=`<div class="day-cell${tod?' today':''}" data-key="${k}" data-d="${d}">
+      ${dd.note?`<div class="note-dot"></div>`:''}
+      <div class="day-num">${d}</div>
+      <div class="day-preview">${dd.drinks.slice(0,4).join('')}</div>
+    </div>`;
+  }
+  html+=`</div>`;
+  let alc=0,na=0,days=0;
+  for(let d=1;d<=dim;d++){const dd=getDayData(key(y,m,d));alc+=countAlc(dd.drinks);na+=countNA(dd.drinks);if(dd.drinks.length)days++}
+  html+=`<div class="stat-row">
+    <div class="stat-card"><div class="stat-label">Alcoholic</div><div class="stat-val">${alc}</div></div>
+    <div class="stat-card"><div class="stat-label">Non-alc</div><div class="stat-val">${na}</div></div>
+    <div class="stat-card"><div class="stat-label">Days out</div><div class="stat-val">${days}</div></div>
+  </div>`;
+  document.getElementById('main-content').innerHTML=html;
+  document.querySelectorAll('.day-cell:not(.empty)').forEach(c=>{
+    c.addEventListener('click',()=>openSheet(c.dataset.key,parseInt(c.dataset.d)));
+  });
+}
+
+function getWeekStart(){
+  const d=new Date(cur);
+  d.setDate(d.getDate()-d.getDay());
+  return d;
+}
+
+function renderWeek(){
+  const ws=getWeekStart();
+  let html=`<div class="week-list">`;
+  let alc=0,na=0;
+  for(let i=0;i<7;i++){
+    const dd2=new Date(ws);dd2.setDate(ws.getDate()+i);
+    const k=key(dd2.getFullYear(),dd2.getMonth(),dd2.getDate());
+    const dd=getDayData(k);
+    const tod=dd2.toDateString()===today.toDateString();
+    alc+=countAlc(dd.drinks);na+=countNA(dd.drinks);
+    const cnt=dd.drinks.length;
+    html+=`<div class="week-row${tod?' today-row':''}" data-key="${k}" data-d="${dd2.getDate()}" data-m="${dd2.getMonth()}" data-y="${dd2.getFullYear()}">
+      <div class="week-meta">
+        <div class="week-dow" style="${tod?'color:var(--accent)':''}">${DAYS[dd2.getDay()]}</div>
+        <div class="week-d">${dd2.getDate()}</div>
+      </div>
+      <div class="week-drinks">${cnt?dd.drinks.join(' '):'<span style="color:var(--text3);font-size:13px;">—</span>'}</div>
+      ${dd.note?`<div class="week-note">${dd.note}</div>`:''}
+      <div class="week-cnt">${cnt?cnt+'x':''}</div>
+    </div>`;
+  }
+  html+=`</div><div class="stat-row">
+    <div class="stat-card"><div class="stat-label">Alcoholic</div><div class="stat-val">${alc}</div></div>
+    <div class="stat-card"><div class="stat-label">Non-alc</div><div class="stat-val">${na}</div></div>
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${alc+na}</div></div>
+  </div>`;
+  document.getElementById('main-content').innerHTML=html;
+  document.querySelectorAll('.week-row').forEach(r=>{
+    r.addEventListener('click',()=>{
+      openSheet(r.dataset.key,parseInt(r.dataset.d),parseInt(r.dataset.m),parseInt(r.dataset.y));
+    });
+  });
+}
+
+function renderDay(){
+  const y=cur.getFullYear(),m=cur.getMonth(),dim=daysInMonth(y,m);
+  let html=`<div class="day-list">`;
+  let found=false;
+  for(let d=1;d<=dim;d++){
+    const k=key(y,m,d);
+    const dd=getDayData(k);
+    if(!dd.drinks.length&&!dd.note) continue;
+    found=true;
+    const tod=isToday(y,m,d);
+    html+=`<div class="day-card" data-key="${k}" data-d="${d}">
+      <div class="day-card-header">
+        <div class="day-card-date" style="${tod?'color:var(--accent)':''}">${DAYS[new Date(y,m,d).getDay()]}, ${MONTHS[m]} ${d}</div>
+        <div class="day-card-cnt">${dd.drinks.length} drink${dd.drinks.length!==1?'s':''}</div>
+      </div>
+      <div class="day-card-drinks">${dd.drinks.join(' ')}</div>
+      ${dd.note?`<div class="day-card-note">${dd.note}</div>`:''}
+    </div>`;
+  }
+  if(!found) html+=`<div class="empty-state">No drinks logged this month.<br>Tap any day in Month view to start.</div>`;
+  html+=`</div>`;
+  document.getElementById('main-content').innerHTML=html;
+  document.querySelectorAll('.day-card').forEach(c=>{
+    c.addEventListener('click',()=>openSheet(c.dataset.key,parseInt(c.dataset.d)));
+  });
+}
+
+function renderStats(){
+  const y=cur.getFullYear(),m=cur.getMonth(),dim=daysInMonth(y,m);
+  let totalAlc=0,totalNA=0;
+  const weekTotals=[0,0,0,0,0,0,0];
+  const drinkCounts={};
+  for(let d=1;d<=dim;d++){
+    const dd=getDayData(key(y,m,d));
+    const dow=new Date(y,m,d).getDay();
+    dd.drinks.forEach(e=>{
+      if(NA_SET.has(e)) totalNA++; else totalAlc++;
+      weekTotals[dow]++;
+      drinkCounts[e]=(drinkCounts[e]||0)+1;
+    });
+  }
+  const maxWeek=Math.max(...weekTotals,1);
+  const sorted=Object.entries(drinkCounts).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const maxD=sorted[0]?sorted[0][1]:1;
+  let html=`<div class="legend">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Alcoholic</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div>Non-alc</div>
+  </div>
+  <div class="stats-section"><div class="stats-heading">By day of week</div>`;
+  DAYS.forEach((dn,i)=>{
+    const pct=Math.round((weekTotals[i]/maxWeek)*100);
+    html+=`<div class="bar-row">
+      <div class="bar-icon" style="font-size:12px;color:var(--text3);min-width:28px;">${dn}</div>
+      <div class="bar-track"><div class="bar-fill-alc" style="width:${pct}%"></div></div>
+      <div class="bar-count">${weekTotals[i]}</div>
+    </div>`;
+  });
+  html+=`</div><div class="stats-section"><div class="stats-heading">Top drinks</div>`;
+  if(sorted.length){
+    sorted.forEach(([e,c])=>{
+      const isNA=NA_SET.has(e);
+      const pct=Math.round((c/maxD)*100);
+      html+=`<div class="bar-row">
+        <div class="bar-icon">${e}</div>
+        <div class="bar-track"><div class="${isNA?'bar-fill-na':'bar-fill-alc'}" style="width:${pct}%"></div></div>
+        <div class="bar-count">${c}</div>
+      </div>`;
+    });
+  } else {
+    html+=`<div class="empty-state" style="padding:20px 0;">No drinks logged yet.</div>`;
+  }
+  html+=`</div><div class="stat-row">
+    <div class="stat-card"><div class="stat-label">Alcoholic</div><div class="stat-val">${totalAlc}</div></div>
+    <div class="stat-card"><div class="stat-label">Non-alc</div><div class="stat-val">${totalNA}</div></div>
+    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-val">${totalAlc+totalNA}</div></div>
+  </div>`;
+  document.getElementById('main-content').innerHTML=html;
+}
+
+function render(){
+  updatePeriodLabel();
+  updateHeaderCount();
+  if(view==='month') renderMonth();
+  else if(view==='week') renderWeek();
+  else if(view==='day') renderDay();
+  else renderStats();
+}
+
+function openSheet(k,d,mon,yr){
+  activeKey=k;
+  const useMon=mon!==undefined?mon:cur.getMonth();
+  const useYr=yr!==undefined?yr:cur.getFullYear();
+  const dow=DAYS[new Date(useYr,useMon,d).getDay()];
+  document.getElementById('sheet-date').textContent=`${dow}, ${MONTHS[useMon]} ${d}`;
+  updateSheetDisplay();
+  document.getElementById('note-input').value=getDayData(k).note||'';
+  document.getElementById('sheet-overlay').classList.add('open');
+}
+
+function updateSheetDisplay(){
+  const drinks=getDayData(activeKey).drinks;
+  const el=document.getElementById('drink-display');
+  if(!drinks.length){el.textContent='Tap a drink to log it';el.classList.add('empty');}
+  else{el.textContent=drinks.join(' ');el.classList.remove('empty');}
+}
+
+function renderEmojiGrid(cat){
+  const list=cat==='alc'?ALC:NA;
+  document.getElementById('emoji-grid').innerHTML=list.map(d=>
+    `<div class="emoji-opt"><button class="emoji-btn" data-emoji="${d.e}">${d.e}</button><div class="emoji-label">${d.l}</div></div>`
+  ).join('');
+  document.querySelectorAll('.emoji-btn').forEach(b=>{
+    b.addEventListener('click',()=>{
+      if(!activeKey)return;
+      if(!DATA[activeKey]) DATA[activeKey]={drinks:[],note:''};
+      DATA[activeKey].drinks.push(b.dataset.emoji);
+      updateSheetDisplay();
+    });
+  });
+}
+
+document.querySelectorAll('.cat-tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.cat-tab').forEach(x=>{x.classList.remove('active-alc');x.classList.remove('active-na');});
+    activeCat=t.dataset.cat;
+    t.classList.add(activeCat==='alc'?'active-alc':'active-na');
+    renderEmojiGrid(activeCat);
+  });
+});
+
+document.getElementById('btn-undo').addEventListener('click',()=>{
+  if(!activeKey||!DATA[activeKey]) return;
+  DATA[activeKey].drinks.pop();
+  updateSheetDisplay();
+});
+
+document.getElementById('btn-done').addEventListener('click',()=>{
+  if(activeKey){
+    if(!DATA[activeKey]) DATA[activeKey]={drinks:[],note:''};
+    DATA[activeKey].note=document.getElementById('note-input').value.trim();
+    if(!DATA[activeKey].drinks.length&&!DATA[activeKey].note) delete DATA[activeKey];
+    saveData();
+  }
+  document.getElementById('sheet-overlay').classList.remove('open');
+  render();
+});
+
+document.getElementById('sheet-overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('sheet-overlay')){
+    document.getElementById('btn-done').click();
+  }
+});
+
+document.querySelectorAll('.view-tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.view-tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    view=t.dataset.view;
+    render();
+  });
+});
+
+document.getElementById('prev').addEventListener('click',()=>{
+  if(view==='week') cur.setDate(cur.getDate()-7);
+  else cur.setMonth(cur.getMonth()-1);
+  render();
+});
+document.getElementById('next').addEventListener('click',()=>{
+  if(view==='week') cur.setDate(cur.getDate()+7);
+  else cur.setMonth(cur.getMonth()+1);
+  render();
+});
+
+const installBanner=document.getElementById('install-banner');
+const isIOS=/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+if(isIOS&&!isStandalone&&!localStorage.getItem('install-dismissed')){
+  installBanner.style.display='block';
+}
+document.getElementById('install-close').addEventListener('click',()=>{
+  installBanner.style.display='none';
+  localStorage.setItem('install-dismissed','1');
+});
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('./sw.js').catch(()=>{});
+}
+
+renderEmojiGrid('alc');
+render();
+</script>
+</body>
+</html>
